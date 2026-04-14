@@ -29,6 +29,7 @@ export default function WordCloudPage() {
   const [filter, setFilter] = useState('전체');
   const [hoveredWord, setHoveredWord] = useState<CloudWord | null>(null);
   const [cloudWords, setCloudWords] = useState<CloudWord[]>([]);
+  const [sortedWords, setSortedWords] = useState<CloudWord[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,14 +43,18 @@ export default function WordCloudPage() {
 
     const words: CloudWord[] = filtered.map((w) => {
       const norm = (w.value - minVal) / (maxVal - minVal + 1);
-      const fontSize = 11 + Math.round(norm * 28);
+      const fontSize = 14 + Math.round(norm * 42);
       const colors = sentimentColors[w.sentiment];
       const color = colors[Math.floor(Math.random() * colors.length)];
-      const rotate = 0;
+      // 10% 확률로 세로 배치
+      const rotate = Math.random() > 0.9 ? 90 : 0;
       return { ...w, fontSize, color, rotate };
     });
 
-    setCloudWords(words);
+    setSortedWords([...words].sort((a, b) => b.value - a.value));
+    // 데이터를 섞어서 중앙 집중형이 아닌 무작위 배치 유도
+    const shuffled = [...words].sort(() => Math.random() - 0.5);
+    setCloudWords(shuffled);
   }, [filter]);
 
   return (
@@ -82,10 +87,10 @@ export default function WordCloudPage() {
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-5">
           <div className="xl:col-span-3">
-            <div className="bg-white border border-slate-200 rounded-xl p-6 min-h-96">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 overflow-hidden shadow-sm">
               <div
                 ref={containerRef}
-                className="flex flex-wrap gap-3 items-center justify-center min-h-80"
+                className="flex flex-wrap gap-1.5 items-center justify-center min-h-[500px] content-center p-4 transition-all duration-500"
               >
                 {cloudWords.map((word) => (
                   <button
@@ -94,11 +99,12 @@ export default function WordCloudPage() {
                     onMouseEnter={() => setHoveredWord(word)}
                     onMouseLeave={() => setHoveredWord(null)}
                     onClick={() => navigate(`/news?q=${encodeURIComponent(word.text)}`)}
-                    className="cursor-pointer transition-all duration-150 hover:scale-110 whitespace-nowrap font-semibold rounded-lg px-2 py-1"
+                    className="cursor-pointer transition-all duration-200 hover:scale-110 whitespace-nowrap font-bold rounded-lg px-2 py-1 leading-tight"
                     style={{
                       fontSize: `${word.fontSize}px`,
                       color: hoveredWord?.text === word.text ? '#0d9488' : word.color,
-                      opacity: hoveredWord && hoveredWord.text !== word.text ? 0.6 : 1,
+                      opacity: hoveredWord && hoveredWord.text !== word.text ? 0.5 : 1,
+                      writingMode: word.rotate === 90 ? 'vertical-rl' : 'horizontal-tb',
                     }}
                   >
                     {word.text}
@@ -177,10 +183,10 @@ export default function WordCloudPage() {
             <div className="bg-white border border-slate-200 rounded-xl p-5">
               <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Top 5 키워드</h4>
               <div className="space-y-2">
-                {cloudWords.slice(0, 5).map((w, i) => (
-                  <div key={w.text} className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/news?q=${encodeURIComponent(w.text)}`)}>
+                {sortedWords.slice(0, 5).map((w, i) => (
+                  <div key={w.text} className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate(`/news?q=${encodeURIComponent(w.text)}`)}>
                     <span className="text-xs text-slate-400 w-4">{i + 1}</span>
-                    <span className="text-xs font-medium text-slate-700 flex-1">{w.text}</span>
+                    <span className="text-xs font-medium text-slate-700 flex-1 group-hover:text-teal-600 transition-colors">{w.text}</span>
                     <span className="text-xs text-teal-600 font-semibold">{w.value}</span>
                   </div>
                 ))}
